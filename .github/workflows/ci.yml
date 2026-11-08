@@ -129,6 +129,12 @@ jobs:
           }
           Write-Host "第一阶段产物验证通过: $projDir"
 
+      - name: 应用图标到安卓工程
+        shell: pwsh
+        run: |
+          python -m pip install --quiet pillow
+          python tools/apply_icons.py build/android/proj
+
       - name: 第二阶段：编译 APK（stage=make）
         shell: pwsh
         run: |

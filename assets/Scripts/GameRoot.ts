@@ -4,6 +4,8 @@ import { Card } from '../Core/Model/Card';
 import { HandPattern } from '../Core/Pattern/HandPattern';
 import { decideBid } from '../Core/AI/BidAI';
 import { decidePlay } from '../Core/AI/PlayAI';
+import { ResultDialog } from './UI/ResultDialog';
+import { ScoreStore } from './UI/ScoreStore';
 
 const { ccclass } = _decorator;
 
@@ -46,6 +48,8 @@ export class GameRoot extends Component {
     private toastTime = 0;
     private scoreLabels: Label[] = [];
     private multiplierLabel: Label = null!;
+    private resultDialog: ResultDialog = null!;
+    private scoreHeader: Label = null!;
 
     start() {
         // 竖屏设计分辨率
@@ -111,6 +115,14 @@ export class GameRoot extends Component {
 
         // 倍数
         this.multiplierLabel = this.makeLabel(canvas, 'multiplier', '倍数 x1', 36, new Vec3(0, 860));
+        // 累计积分头（左上）
+        const scores = ScoreStore.load();
+        this.scoreHeader = this.makeLabel(canvas, 'scoreHeader',
+            `第 ${ScoreStore.gameCount + 1} 局   我的积分 ${scores[0]}`, 30, new Vec3(-280, 900));
+        // 结算弹窗（挂 canvas 下）
+        const dialogNode = new Node('ResultDialogHolder');
+        dialogNode.parent = canvas;
+        this.resultDialog = dialogNode.addComponent(ResultDialog);
         // 底牌区
         const bottomArea = new Node('Bottom');
         bottomArea.parent = canvas;
@@ -247,6 +259,11 @@ export class GameRoot extends Component {
         this.humanSeat = humanPlays ? 0 : -1;
         this.clearPlayed();
         this.clearHand();
+        this.bottomCardNodes.forEach(n => n.destroy());
+        this.bottomCardNodes = [];
+        // 刷新积分头
+        const scores = ScoreStore.load();
+        this.scoreHeader.string = `第 ${ScoreStore.gameCount + 1} 局   我的积分 ${scores[0]}`;
         this.game.startGame();
     }
 
@@ -299,16 +316,11 @@ export class GameRoot extends Component {
 
     private onSettled(r: GameResult) {
         this.actionNode.active = false;
-        const humanWin = r.landlordWin === (this.humanSeat === r.landlordSeat);
-        let msg = humanWin ? '🎉 你赢了！\n' : '你输了\n';
-        msg += `底分 ${r.baseScore} × 倍数 ${r.multiplier}${r.bombCount ? `（炸弹×${r.bombCount}）` : ''}${r.spring ? '（春天）' : ''}\n`;
-        for (let seat = 0; seat < 3; seat++) {
-            const role = seat === r.landlordSeat ? '地主' : '农民';
-            const d = r.scoreDeltas[seat];
-            msg += `玩家${seat + 1}${seat === this.humanSeat ? '(你)' : ''} [${role}] ${d > 0 ? '+' : ''}${d}\n`;
-        }
-        this.showToast(msg, 6);
-        this.scheduleOnce(() => this.newRound(true), 6);
+        // 积分持久化
+        const scores = ScoreStore.add(r.scoreDeltas);
+        ScoreStore.incrementGames();
+        // 结算弹窗（按钮驱动下一局，不再自动开新局）
+        this.resultDialog.show(r, scores, this.humanSeat, () => this.newRound(true));
     }
 
     // ================= 玩家操作 =================
