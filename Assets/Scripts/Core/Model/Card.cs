@@ -99,10 +99,11 @@ namespace DDZ.Core
 
         public override string ToString()
         {
+            if (IsJoker)
+                return Rank == Rank.SmallJoker ? "小王" : "大王";
+
             int ordinal = Rank == Rank.Two ? 12 : (int)Rank - (int)Rank.Three;
             string rankName = RankNames[ordinal];
-            if (IsJoker)
-                return rankName;
 
             char suitSymbol = Suit switch
             {
