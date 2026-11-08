@@ -84,6 +84,7 @@ jobs:
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_TOTP_SEED: ${{ secrets.UNITY_TOTP_SEED }}
         with:
           cliVersion: v0.1.72
           targetPlatform: Android
