@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core-tests:
+    name: 规则引擎单元测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: dotnet test (DDZ.Core)
+        run: dotnet test dotnet-tests/DDZ.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
+
+  unity-build:
+    name: 云端构建 APK
+    runs-on: ubuntu-latest
+    needs: core-tests
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: 缓存 Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Android-2022.3.76f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-Android-2022.3.76f1-
+
+      - name: 激活 Unity 许可证
+        uses: game-ci/unity-activate@v2
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_TOTP_SEED: ${{ secrets.UNITY_TOTP_SEED }}
+
+      - name: 构建 Android APK
+        uses: game-ci/unity-builder@v6
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_TOTP_SEED: ${{ secrets.UNITY_TOTP_SEED }}
+        with:
+          targetPlatform: Android
+          unityVersion: auto
+          projectPath: .
+          buildName: DDZ
+          buildsPath: build
+          buildMethod: DDZ.Editor.CloudBuild.BuildAndroid
+          androidExportType: androidPackage
+          versioning: Custom
+          version: 0.1.${{ github.run_number }}
+          androidVersionCode: ${{ github.run_number }}
+
+      - name: 上传 APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DDZ-Android-APK
+          path: build/Android/DDZ.apk
+          retention-days: 14

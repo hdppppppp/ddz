@@ -1,0 +1,40 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# Visual Studio / Rider cache
+.vs/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity meta should be versioned; but crash-generated junk is not
+sysinfo.txt
+*.stackdump
+crashlytics-build.properties
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# dotnet test artifacts
+dotnet-tests/bin/
+dotnet-tests/obj/
+TestResults/
