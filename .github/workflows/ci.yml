@@ -36,19 +36,11 @@ jobs:
           restore-keys: |
             Library-Android-2022.3.76f1-
 
-      - name: 激活 Unity 许可证
-        uses: game-ci/unity-activate@v2
-        env:
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_TOTP_SEED: ${{ secrets.UNITY_TOTP_SEED }}
-
-      - name: 构建 Android APK
+      - name: 构建 Android APK（容器内自动激活许可证）
         uses: game-ci/unity-builder@v6
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_TOTP_SEED: ${{ secrets.UNITY_TOTP_SEED }}
         with:
           targetPlatform: Android
           unityVersion: auto
