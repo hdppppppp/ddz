@@ -2,125 +2,180 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, cocos-main]
   pull_request:
   workflow_dispatch:
 
 jobs:
   core-tests:
-    name: 规则引擎单元测试
+    name: 规则引擎测试 (vitest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-node@v4
         with:
-          dotnet-version: 8.0.x
-      - name: dotnet test (DDZ.Core)
-        run: dotnet test dotnet-tests/DDZ.Core.Tests.csproj -c Release --logger "console;verbosity=normal"
-
-  unity-build:
-    name: 云端构建 APK
-    runs-on: ubuntu-latest
-    needs: core-tests
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: 缓存 Library
+          node-version: 20
+      - name: 缓存测试依赖
         uses: actions/cache@v4
         with:
-          path: Library
-          key: Library-Android-2022.3.76f1-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Library-Android-2022.3.76f1-
+          path: tests/node_modules
+          key: tests-node20-${{ hashFiles('tests/package.json') }}
+      - run: npm install --prefix tests --no-audit --no-fund
+      - name: 运行规则引擎测试
+        run: npm test --prefix tests
 
-      - name: 还原 game-ci CLI 缓存
-        id: cli-restore
-        uses: actions/cache/restore@v4
+  cocos-build:
+    name: 云端构建 APK (Cocos Creator 3.8.6)
+    runs-on: windows-latest
+    needs: core-tests
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cocos-main' || github.event_name == 'workflow_dispatch'
+    env:
+      CC_VERSION: 3.8.6
+      CC_ZIP: CocosCreator-v3.8.6-win-032501.zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 JDK 17
+        uses: actions/setup-java@v4
         with:
-          path: /tmp/game-ci-cli-cache/v0.1.72
-          key: game-ci-cli-v0.1.72-linux-x64
+          distribution: temurin
+          java-version: '17'
 
-      - name: 安装 Bun（源码编译 CLI 的回退手段）
-        if: steps.cli-restore.outputs.cache-hit != 'true'
-        uses: oven-sh/setup-bun@v2
+      # ===== 缓存层 1：Cocos 编辑器（948MB zip 解压后 ~3GB）=====
+      - name: 缓存 Cocos Creator 编辑器
+        id: editor-cache
+        uses: actions/cache@v4
         with:
-          bun-version: 1.3.13
+          path: C:\cocos-editor
+          key: cocos-editor-3.8.6-v1
 
-      - name: 预取 game-ci CLI（CDN 504 时退避重试，持续失败则源码编译）
-        if: steps.cli-restore.outputs.cache-hit != 'true'
+      - name: 下载解压 Cocos Creator（未命中缓存时，约 10 分钟）
+        if: steps.editor-cache.outputs.cache-hit != 'true'
+        shell: pwsh
         run: |
-          set -e
-          mkdir -p /tmp/game-ci-cli-cache/v0.1.72
-          for i in 1 2 3 4 5 6; do
-            curl -fsSL "https://raw.githubusercontent.com/game-ci/cli/v0.1.72/scripts/install.sh" \
-              | bash -s -- v0.1.72 /tmp/game-ci-cli-cache/v0.1.72 && exit 0
-            echo "install attempt $i failed (release CDN 504?), retrying in 20s..."
-            sleep 20
-          done
-          echo "::warning::Release CDN 持续 504，改用源码编译 game-ci CLI"
-          cd /tmp
-          curl -fsSL "https://github.com/game-ci/cli/archive/refs/tags/v0.1.72.tar.gz" -o cli-src.tar.gz
-          tar -xzf cli-src.tar.gz
-          cd cli-0.1.72
-          bun install
-          bun run build:assets
-          bun build src/index.ts --compile --target bun-linux-x64 \
-            --outfile /tmp/game-ci-cli-cache/v0.1.72/game-ci
-          chmod +x /tmp/game-ci-cli-cache/v0.1.72/game-ci
-          /tmp/game-ci-cli-cache/v0.1.72/game-ci --version
+          New-Item -ItemType Directory -Force -Path C:\cocos-editor | Out-Null
+          Invoke-WebRequest -Uri "https://download.cocos.com/CocosCreator/v3.8.6/$env:CC_ZIP" -OutFile C:\cc.zip
+          Expand-Archive -Path C:\cc.zip -DestinationPath C:\cocos-editor -Force
+          Remove-Item C:\cc.zip
 
-      - name: 保存 game-ci CLI 缓存
-        if: steps.cli-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: /tmp/game-ci-cli-cache/v0.1.72
-          key: game-ci-cli-v0.1.72-linux-x64
+      - name: 定位编辑器
+        id: locate
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path C:\cocos-editor -Recurse -Filter "CocosCreator.exe" |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $exe) { Write-Error "CocosCreator.exe not found"; exit 1 }
+          Write-Host "editor: $exe"
+          "CC_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: 构建 Android APK（容器内自动激活许可证）
-        uses: game-ci/unity-builder@v6
-        env:
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_TOTP_SEED: ${{ secrets.UNITY_TOTP_SEED }}
+      # ===== 缓存层 2：Android NDK =====
+      - name: 缓存并安装 NDK r21e
+        id: ndk-cache
+        uses: actions/cache@v4
         with:
-          cliVersion: v0.1.72
-          targetPlatform: Android
-          unityVersion: auto
-          projectPath: .
-          buildName: DDZ
-          buildsPath: build
-          buildMethod: DDZ.Editor.CloudBuild.BuildAndroid
-          androidExportType: androidPackage
-          androidTargetSdkVersion: 33
-          versioning: Custom
-          version: 0.1.${{ github.run_number }}
-          androidVersionCode: ${{ github.run_number }}
+          path: C:\android-ndk-r21e
+          key: android-ndk-r21e
+
+      - name: 下载 NDK（未命中时）
+        if: steps.ndk-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://dl.google.com/android/repository/android-ndk-r21e-windows-x86_64.zip" -OutFile C:\ndk.zip
+          Expand-Archive -Path C:\ndk.zip -DestinationPath C:\ -Force
+          Remove-Item C:\ndk.zip
+
+      # ===== 缓存层 3：项目 library（Cocos 资源导入缓存）=====
+      - name: 缓存项目 library
+        uses: actions/cache@v4
+        with:
+          path: library
+          key: cocos-library-android-${{ hashFiles('assets/**', 'settings/**', 'package.json') }}
+          restore-keys: cocos-library-android-
+
+      - name: 确保 Android SDK 组件
+        shell: pwsh
+        run: |
+          $sdk = "$env:LOCALAPPDATA\Android\Sdk"
+          if (-not (Test-Path $sdk)) { $sdk = "$env:ANDROID_HOME" }
+          Write-Host "SDK: $sdk"
+          "ANDROID_SDK=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $cmd = Get-ChildItem "$sdk\cmdline-tools" -Recurse -Filter "sdkmanager.bat" -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+          if ($cmd) {
+            yes | & $cmd "platforms;android-33" "build-tools;33.0.0" 2>$null | Out-Null
+          } else {
+            Write-Host "::warning::sdkmanager 不存在，跳过组件安装（CI 镜像可能已内置）"
+          }
+
+      - name: 第一阶段：生成 Android 工程（Cocos CLI）
+        shell: pwsh
+        run: |
+          $log = "cocos-build-stage1.log"
+          & $env:CC_EXE --project $env:GITHUB_WORKSPACE --build "configPath=ci/build-config-android.json;logDest=$log"
+          $code = $LASTEXITCODE
+          Write-Host "exit code: $code"
+          if ($code -notin 0, 36) {
+            if (Test-Path $log) { Get-Content $log -Tail 100 }
+            Write-Error "Cocos 构建失败 (exit $code)"; exit 1
+          }
+
+      - name: 第二阶段：编译 APK（stage=make）
+        shell: pwsh
+        run: |
+          $env:COCOS_NDK_PATH = "C:\android-ndk-r21e"
+          $env:COCOS_CONSOLE_ROOT = Split-Path $env:CC_EXE
+          $log = "cocos-build-stage2.log"
+          & $env:CC_EXE --project $env:GITHUB_WORKSPACE --build "stage=make;platform=android;configPath=ci/build-config-android.json;logDest=$log"
+          $code = $LASTEXITCODE
+          Write-Host "exit code: $code"
+          if ($code -notin 0, 36) {
+            if (Test-Path $log) { Get-Content $log -Tail 120 }
+            Write-Error "Native 编译失败 (exit $code)"; exit 1
+          }
+
+      - name: 查找 APK
+        id: apk
+        shell: pwsh
+        run: |
+          $apk = Get-ChildItem -Path build -Recurse -Filter "*.apk" -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $apk) {
+            Write-Host "build 目录内容:"
+            if (Test-Path build) { Get-ChildItem build -Recurse -Depth 3 | Select-Object FullName | Format-Table }
+            Write-Error "未找到 APK"; exit 1
+          }
+          Write-Host "APK: $apk"
+          "APK_PATH=$apk" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: 上传 APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: DDZ-Android-APK
-          path: build/Android/DDZ.apk
+          path: ${{ env.APK_PATH }}
           retention-days: 14
+
+      - name: 上传构建日志（失败时排查用）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cocos-build-logs
+          path: "cocos-build-*.log"
+          retention-days: 7
+          if-no-files-found: ignore
 
   release:
     name: 发布 Release
     runs-on: ubuntu-latest
-    needs: unity-build
+    needs: cocos-build
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
-      - name: 下载 APK
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: DDZ-Android-APK
           path: .
-      - name: 创建 Release 并上传 APK
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
-          files: DDZ.apk
+          files: "*.apk"
           generate_release_notes: true

@@ -1,0 +1,14 @@
+{
+  "name": "ddz-cocos",
+  "uuid": "d6f0e5c2-1a2b-4c3d-8e4f-9a0b1c2d3e4f",
+  "creator": {
+    "version": "3.8.6"
+  },
+  "description": "斗地主单机版（Cocos Creator 3.8.6）",
+  "author": "hdppppppp",
+  "main": "",
+  "dependencies": {
+    "main": "./extensions/main"
+  },
+  "type": "3d"
+}
