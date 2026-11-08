@@ -82,7 +82,7 @@ namespace DDZ.Presentation
             _seats[0].PlayedArea = CreateContainer("Played0", new Vector2(0, -20), new Vector2(460, 260));
 
             // 手牌
-            _handView = new HandView(CreateContainer("Hand", new Vector2(0, -RefH / 2 + 340), new Vector2(RefW - 60, 260)));
+            _handView = new HandView(CreateContainer("Hand", new Vector2(0, -RefH / 2 + 340), new Vector2(RefW - 60, 260)), _selected);
 
             // 操作按钮
             _actions = new ActionBar(CreateContainer("Actions", new Vector2(0, -RefH / 2 + 560), new Vector2(RefW, 130)),
@@ -183,6 +183,7 @@ namespace DDZ.Presentation
         public void EnableBidding(bool enabled)
         {
             if (enabled) { _bidding!.Show(); _actions!.Hide(); }
+            else _bidding!.Hide();
         }
 
         public void EnableActions(bool enabled, bool canPass)

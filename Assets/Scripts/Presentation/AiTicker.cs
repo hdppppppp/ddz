@@ -1,12 +1,12 @@
 using System;
-using System.Collections.Generic;
 using DDZ.Core;
+using UnityEngine;
 
 namespace DDZ.Presentation
 {
     /// <summary>
     /// AI 玩家的节拍驱动器：轮到 AI 座位时延迟思考后落子。
-    /// 由 GamePresenter 挂在 Unity 主循环（协程/MonoBehaviour）上调用 Tick()。
+    /// 由 GamePresenter 每帧调用 Tick()；人类座位完全由 UI 驱动。
     /// </summary>
     public sealed class AiTicker
     {
@@ -15,39 +15,43 @@ namespace DDZ.Presentation
         private float _remaining;
         private int _pendingSeat = -1;
         private bool _waiting;
+        private int _humanSeat = -1;
 
         public AiTicker(GameController game, Func<int, float>? thinkTimeProvider = null)
         {
             _game = game;
-            _thinkTimeProvider = thinkTimeProvider ?? (seat => 0.8f + 0.4f * (seat % 2));
+            _thinkTimeProvider = thinkTimeProvider ?? (_ => UnityEngine.Random.Range(0.7f, 1.4f));
         }
 
-        /// <summary>每帧调用。deltaTime 秒。返回 true 表示本帧执行了一次 AI 动作。</summary>
+        /// <summary>人类玩家的座位（-1 表示无/观战）。</summary>
+        public int HumanSeat
+        {
+            get => _humanSeat;
+            set
+            {
+                _humanSeat = value;
+                _waiting = false;
+            }
+        }
+
+        /// <summary>每帧调用。返回 true 表示本帧执行了一次 AI 动作。</summary>
         public bool Tick(float deltaTime)
         {
-            if (_game.Phase == GamePhase.Settled)
+            if (_game.Phase is not (GamePhase.Bidding or GamePhase.Playing))
                 return false;
 
             int seat = _game.Phase == GamePhase.Bidding ? _game.BidTurnSeat : _game.CurrentSeat;
-            if (seat < 0)
-                return false;
-
-            if (!_waiting)
+            if (seat < 0 || seat == _humanSeat)
             {
-                // 新的回合：是 AI 才开始倒计时
-                if (_game.Phase == GamePhase.Bidding || seat != _humanSeat)
-                {
-                    _pendingSeat = seat;
-                    _remaining = _thinkTimeProvider(seat);
-                    _waiting = true;
-                }
+                _waiting = false;
                 return false;
             }
 
-            if (seat != _pendingSeat)
+            if (!_waiting || seat != _pendingSeat)
             {
-                // 轮转变了（例如人刚出完牌），重新计时
-                _waiting = false;
+                _pendingSeat = seat;
+                _remaining = _thinkTimeProvider(seat);
+                _waiting = true;
                 return false;
             }
 
@@ -56,24 +60,15 @@ namespace DDZ.Presentation
                 return false;
 
             _waiting = false;
-            ActAs(_pendingSeat);
+            ActAs(seat);
             return true;
-        }
-
-        private int _humanSeat = -1;
-
-        /// <summary>人类玩家的座位（-1 表示无/全员 AI）。</summary>
-        public int HumanSeat
-        {
-            get => _humanSeat;
-            set => _humanSeat = value;
         }
 
         private void ActAs(int seat)
         {
             if (_game.Phase == GamePhase.Bidding)
             {
-                int bid = BidAI.DecideBid(_game.Players[seat].Hand, 0);
+                int bid = BidAI.DecideBid(_game.Players[seat].Hand, _game.HighestBid);
                 _game.Bid(seat, bid);
             }
             else

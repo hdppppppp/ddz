@@ -158,11 +158,14 @@ namespace DDZ.Core
                 throw new InvalidOperationException($"出牌不合法: {pattern.Type}");
 
             var player = _players[seat];
-            var cardSet = new HashSet<int>(cards.Select(c => c.Id));
-            if (cardSet.Count != cards.Count || !cards.All(c => player.Hand.Any(h => h.Id == c.Id)))
+            // 先快照 Id，防止 cards 与手牌是同一集合（AI 可能返回手牌引用）导致遍历时被修改
+            var playedIds = cards.Select(c => c.Id).Distinct().ToList();
+            if (playedIds.Count != cards.Count)
+                throw new InvalidOperationException("出牌包含重复的牌");
+            if (!playedIds.All(id => player.Hand.Any(h => h.Id == id)))
                 throw new InvalidOperationException("出牌包含不持有的牌");
-            foreach (var c in cards)
-                player.Hand.RemoveAll(h => h.Id == c.Id);
+
+            player.Hand.RemoveAll(h => playedIds.Contains(h.Id));
 
             player.PlayCount++;
             if (pattern.IsBombLike)

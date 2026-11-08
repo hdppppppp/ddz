@@ -19,7 +19,6 @@ namespace DDZ.Core
 
             if (freePlay)
                 return ChooseFreePlay(hand);
-
             var candidates = PlayValidator.EnumerateBeats(hand, last!);
             if (candidates.Count == 0)
                 return null;
@@ -64,10 +63,10 @@ namespace DDZ.Core
 
         private static IReadOnlyList<Card> ChooseFreePlay(IReadOnlyList<Card> hand)
         {
-            // 只剩一手直接全出
+            // 只剩一手直接全出（拷贝，不返回手牌活引用）
             var whole = PatternRecognizer.Recognize(hand);
             if (whole.Type != PatternType.Invalid)
-                return hand;
+                return hand.ToList();
 
             // 手牌分解：优先拆出"最小主牌"的最小组合
             var decomposed = Decompose(hand);
