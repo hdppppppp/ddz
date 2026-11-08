@@ -1,8 +1,14 @@
 # 斗地主（DDZ）Unity 单机版 — 设计方案
 
-> 版本 v1.0（2026-11-08）
+> 版本 v1.1（2026-11-08）
 > 仓库：https://github.com/hdppppppp/ddz
-> 形态：纯单机（无后端），玩家 vs 2 个 AI；云端编译，本机不装 Unity、不本地编译。
+> 形态：纯单机（无后端），玩家 vs 2 个 AI；**全部构建在 GitHub Actions 云端完成**（GameCI），本机零安装、零编译。
+
+### v1.1 变更
+- 构建方案从 Unity Build Automation 改为 **GitHub Actions + GameCI（unity-builder v6）**：公开仓库 Actions 免费，无 Dashboard 依赖。
+- 云构建细节：容器内自动激活许可证（`UNITY_EMAIL/PASSWORD` secrets）；game-ci CLI 经预取步骤（504 退避重试）+ `actions/cache` 缓存键 `game-ci-cli-v0.1.72-linux-x64`（与 builder 内部实现一致）。
+- 场景不进仓库：`DDZ.Editor.CloudBuild.BuildAndroid` 在云端**代码生成场景**（SceneBootstrapper）后构建，避免手写场景 YAML。
+
 
 ---
 
