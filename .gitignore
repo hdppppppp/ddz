@@ -13,6 +13,7 @@
 .vs/
 .idea/
 *.csproj
+!dotnet-tests/*.csproj
 *.sln
 *.suo
 *.user
