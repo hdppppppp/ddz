@@ -79,5 +79,32 @@ namespace DDZ.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => new Card(-1));
             Assert.Throws<ArgumentOutOfRangeException>(() => new Card(54));
         }
+
+        [Fact]
+        public void Card_All54Ids_RoundTripRankAndSuit()
+        {
+            for (int id = 0; id < 54; id++)
+            {
+                var card = new Card(id);
+                var rebuilt = new Card(card.Rank, card.Suit);
+                Assert.True(rebuilt == card, $"Id={id} round-trip 失败: {card} -> {card.Rank}/{card.Suit}");
+            }
+
+            // 关键映射抽查
+            Assert.Equal(Rank.Two, new Card(12).Rank);            // ♠2
+            Assert.Equal(Rank.Three, new Card(0).Rank);           // ♠3
+            Assert.Equal(Rank.Ace, new Card(11).Rank);            // ♠A
+            Assert.Equal(Rank.Two, new Card(25).Rank);            // ♥2
+            Assert.Equal(Rank.Ace, new Card(24).Rank);            // ♥A
+
+            // 每个点数恰好 4 张（王除外）
+            var full = Deck.CreateFull();
+            foreach (Rank rank in Enum.GetValues(typeof(Rank)))
+            {
+                if (rank == Rank.SmallJoker || rank == Rank.BigJoker)
+                    continue;
+                Assert.Equal(4, full.Count(c => c.Rank == rank));
+            }
+        }
     }
 }

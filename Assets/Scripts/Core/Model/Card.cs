@@ -64,7 +64,9 @@ namespace DDZ.Core
                 _ => throw new ArgumentOutOfRangeException(nameof(suit), suit, "普通牌必须指定花色"),
             };
 
-            Id = suitIndex * 13 + ((int)rank - (int)Rank.Three);
+            // 普通牌序号 0..12：Three..Ace 直接用枚举值偏移，Two 固定占 12 号位
+            int ordinal = rank == Rank.Two ? 12 : (int)rank - (int)Rank.Three;
+            Id = suitIndex * 13 + ordinal;
         }
 
         /// <summary>唯一编号 0..53。</summary>
@@ -74,7 +76,8 @@ namespace DDZ.Core
         {
             52 => Rank.SmallJoker,
             53 => Rank.BigJoker,
-            _ => (Rank)(Id % 13 + (int)Rank.Three),
+            // 序号 0..11 → Three..Ace；12 → Two
+            _ => Id % 13 == 12 ? Rank.Two : (Rank)(Id % 13 + (int)Rank.Three),
         };
 
         public Suit Suit => Id switch
