@@ -6,6 +6,7 @@ import { decideBid } from '../Core/AI/BidAI';
 import { decidePlay } from '../Core/AI/PlayAI';
 import { ResultDialog } from './UI/ResultDialog';
 import { ScoreStore } from './UI/ScoreStore';
+import { CardAtlas } from './UI/CardAtlas';
 
 const { ccclass } = _decorator;
 
@@ -54,6 +55,10 @@ export class GameRoot extends Component {
     start() {
         // 竖屏设计分辨率
         view.setDesignResolutionSize(1080, 1920, ResolutionPolicy.FIXED_WIDTH);
+        // 预载牌面图集（失败自动回退纯代码卡面）
+        CardAtlas.preload().then(() => {
+            if (CardAtlas.isAvailable) this.renderHand();
+        });
 
         this.game.events = {
             onCardsDealt: (seat, hand) => this.onCardsDealt(seat, hand),
@@ -223,8 +228,12 @@ export class GameRoot extends Component {
         const sp = go.addComponent(Sprite);
         sp.type = Sprite.SizeMode.CUSTOM;
         sp.sizeMode = Sprite.SizeMode.CUSTOM;
-        sp.spriteFrame = makeSolidSprite(Color.WHITE);
-        sp.color = card.isJoker ? new Color(235, 225, 250) : Color.WHITE;
+        sp.spriteFrame = CardAtlas.get(card.id) ?? makeSolidSprite(Color.WHITE);
+        sp.color = CardAtlas.get(card.id) ? Color.WHITE : (card.isJoker ? new Color(235, 225, 250) : Color.WHITE);
+        if (CardAtlas.get(card.id)) {
+            // 图集模式下卡面已含全部内容，直接返回
+            return go;
+        }
 
         const isRed = card.suit === 1 || card.suit === 3 || card.isJoker; // ♥/♦/王
         const color = card.isJoker ? JOKER_RED : isRed ? RED : BLACK;
