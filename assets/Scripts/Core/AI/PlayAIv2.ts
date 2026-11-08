@@ -212,8 +212,8 @@ function chooseBeatSmart(game: GameController, seat: number, candidates: HandPat
         }
     }
 
-    // 终局 minimax（我方剩 ≤4 张）：对每个候选模拟后取"我方手数最少"者
-    if (hand.length <= 4 && !isLandlord || hand.length <= 4) {
+    // 终局评估（我方剩 ≤4 张）：对每个候选模拟后取"我方手数最少"者
+    if (hand.length <= 4) {
         let best = candidates[0];
         let bestHands = 99;
         for (const cand of candidates) {
