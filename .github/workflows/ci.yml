@@ -36,12 +36,41 @@ jobs:
           restore-keys: |
             Library-Android-2022.3.76f1-
 
+      - name: 还原 game-ci CLI 缓存
+        id: cli-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/game-ci-cli-cache/v0.1.72
+          key: game-ci-cli-v0.1.72-linux-x64
+
+      - name: 预取 game-ci CLI（504 时退避重试）
+        if: steps.cli-restore.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          mkdir -p /tmp/game-ci-cli-cache/v0.1.72
+          for i in 1 2 3 4 5 6; do
+            curl -fsSL "https://raw.githubusercontent.com/game-ci/cli/v0.1.72/scripts/install.sh" \
+              | bash -s -- v0.1.72 /tmp/game-ci-cli-cache/v0.1.72 && exit 0
+            echo "install attempt $i failed, retrying in 30s..."
+            sleep 30
+          done
+          echo "game-ci CLI install failed after retries"
+          exit 1
+
+      - name: 保存 game-ci CLI 缓存
+        if: steps.cli-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/game-ci-cli-cache/v0.1.72
+          key: game-ci-cli-v0.1.72-linux-x64
+
       - name: 构建 Android APK（容器内自动激活许可证）
         uses: game-ci/unity-builder@v6
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
+          cliVersion: v0.1.72
           targetPlatform: Android
           unityVersion: auto
           projectPath: .
