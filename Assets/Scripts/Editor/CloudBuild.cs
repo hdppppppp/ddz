@@ -68,6 +68,7 @@ namespace DDZ.Editor
             PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.Android.applicationIdentifier = "com.hdppppppp.ddz";
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersion.Android23;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersion.Android33;
             PlayerSettings.SetScriptingBackend(
                 UnityEditor.Build.NamedBuildTarget.Android,
                 ScriptingImplementation.Mono2x);

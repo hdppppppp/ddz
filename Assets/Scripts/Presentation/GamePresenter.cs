@@ -32,6 +32,10 @@ namespace DDZ.Presentation
         private void Update()
         {
             _ticker.Tick(Time.deltaTime);
+
+            // 轮到玩家叫分时确保叫分条可见（AI 叫分后轮次回到玩家没有专门事件）
+            if (_game.Phase == GamePhase.Bidding && _game.BidTurnSeat == _humanSeat)
+                _board.EnableBidding(true);
         }
 
         /// <summary>开始新的一局（含叫分）。</summary>

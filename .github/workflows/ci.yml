@@ -93,6 +93,7 @@ jobs:
           buildsPath: build
           buildMethod: DDZ.Editor.CloudBuild.BuildAndroid
           androidExportType: androidPackage
+          androidTargetSdkVersion: 33
           versioning: Custom
           version: 0.1.${{ github.run_number }}
           androidVersionCode: ${{ github.run_number }}
