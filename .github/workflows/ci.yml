@@ -112,41 +112,44 @@ jobs:
       - name: 第一阶段：生成 Android 工程（Cocos CLI）
         shell: pwsh
         run: |
-          $log = "cocos-build-stage1.log"
-          & $env:CC_EXE --project $env:GITHUB_WORKSPACE --build "configPath=ci/build-config-android.json;logDest=$log"
-          $code = $LASTEXITCODE
-          Write-Host "exit code: $code"
-          if ($code -notin 0, 36) {
-            if (Test-Path $log) { Get-Content $log -Tail 100 }
-            Write-Error "Cocos 构建失败 (exit $code)"; exit 1
+          # Cocos 是 GUI 程序，pwsh 的 $LASTEXITCODE 不会被设置（为空）。
+          # 必须用 Start-Process -Wait -PassThru 拿真实 ExitCode，并以产物为最终判据。
+          $proc = Start-Process -FilePath $env:CC_EXE `
+            -ArgumentList '--project', $env:GITHUB_WORKSPACE, '--build', 'configPath=ci/build-config-android.json' `
+            -Wait -PassThru -NoNewWindow
+          Write-Host "exit code: $($proc.ExitCode)"
+
+          $projDir = Join-Path $env:GITHUB_WORKSPACE "build\android\proj"
+          if (-not (Test-Path $projDir)) {
+            Write-Host "::error::第一阶段产物 build/android/proj 不存在"
+            if (Test-Path (Join-Path $env:GITHUB_WORKSPACE "build")) {
+              Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE "build") -Recurse -Depth 2 | Select-Object FullName | Format-Table
+            }
+            exit 1
           }
+          Write-Host "第一阶段产物验证通过: $projDir"
 
       - name: 第二阶段：编译 APK（stage=make）
         shell: pwsh
         run: |
           $env:COCOS_NDK_PATH = "C:\android-ndk-r21e"
           $env:COCOS_CONSOLE_ROOT = Split-Path $env:CC_EXE
-          $log = "cocos-build-stage2.log"
-          & $env:CC_EXE --project $env:GITHUB_WORKSPACE --build "stage=make;platform=android;configPath=ci/build-config-android.json;logDest=$log"
-          $code = $LASTEXITCODE
-          Write-Host "exit code: $code"
-          if ($code -notin 0, 36) {
-            if (Test-Path $log) { Get-Content $log -Tail 120 }
-            Write-Error "Native 编译失败 (exit $code)"; exit 1
-          }
+          # NDK/SDK 路径也可经构建参数传入（不同版本字段名不同，两个都给）
+          $arg = "stage=make;platform=android;configPath=ci/build-config-android.json;ndkPath=C:\android-ndk-r21e"
+          $proc = Start-Process -FilePath $env:CC_EXE `
+            -ArgumentList '--project', $env:GITHUB_WORKSPACE, '--build', $arg `
+            -Wait -PassThru -NoNewWindow
+          Write-Host "exit code: $($proc.ExitCode)"
 
-      - name: 查找 APK
-        id: apk
-        shell: pwsh
-        run: |
-          $apk = Get-ChildItem -Path build -Recurse -Filter "*.apk" -ErrorAction SilentlyContinue |
+          # 产物导向判定：全仓找 APK（不依赖退出码）
+          $apk = Get-ChildItem -Path (Join-Path $env:GITHUB_WORKSPACE "build") -Recurse -Filter "*.apk" -ErrorAction SilentlyContinue |
             Select-Object -First 1 -ExpandProperty FullName
           if (-not $apk) {
-            Write-Host "build 目录内容:"
-            if (Test-Path build) { Get-ChildItem build -Recurse -Depth 3 | Select-Object FullName | Format-Table }
-            Write-Error "未找到 APK"; exit 1
+            Write-Host "::error::未找到 APK，build 目录内容："
+            Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE "build") -Recurse -Depth 3 | Select-Object FullName | Format-Table
+            exit 1
           }
-          Write-Host "APK: $apk"
+          Write-Host "APK 生成: $apk"
           "APK_PATH=$apk" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: 上传 APK Artifact
