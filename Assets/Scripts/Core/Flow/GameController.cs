@@ -76,6 +76,7 @@ namespace DDZ.Core
             _bidCount = 0;
             _highestBid = 0;
             _highestBidder = -1;
+            BiddingNeedsRestart = false;
             _lastPlay = null;
             _lastPlaySeat = -1;
             _passCount = 0;
@@ -87,6 +88,12 @@ namespace DDZ.Core
 
         /// <summary>当前该叫分的座位。</summary>
         public int BidTurnSeat => Phase == GamePhase.Bidding ? _bidTurn : -1;
+
+        /// <summary>当前最高叫分（0=还没人叫）。</summary>
+        public int HighestBid => _highestBid;
+
+        /// <summary>一轮叫分全部不叫，需要调用方重新开局。</summary>
+        public bool BiddingNeedsRestart { get; private set; }
 
         /// <summary>提交叫分（0=不叫，1/2/3）。返回地主座位，未决出返回 -1。</summary>
         public int Bid(int seat, int score)
@@ -111,6 +118,7 @@ namespace DDZ.Core
             {
                 if (_highestBidder < 0)
                 {
+                    BiddingNeedsRestart = true;
                     _events.RaiseBiddingRestarted();
                     return -1;
                 }

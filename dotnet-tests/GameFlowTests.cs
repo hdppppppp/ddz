@@ -32,11 +32,11 @@ namespace DDZ.Core.Tests
 
             int first = game.BidTurnSeat;
             int landlord = -1;
-            // 简单叫分：每人按 BidAI 决策
+            // 简单叫分：每人按 BidAI 决策（传当前最高分）
             for (int i = 0; i < 3 && landlord < 0; i++)
             {
                 int seat = game.BidTurnSeat;
-                int bid = BidAI.DecideBid(game.Players[seat].Hand, 0);
+                int bid = BidAI.DecideBid(game.Players[seat].Hand, game.HighestBid);
                 landlord = game.Bid(seat, bid);
             }
 
@@ -73,20 +73,14 @@ namespace DDZ.Core.Tests
             var game = new GameController();
             game.StartGame();
 
-            // 重开直到有人叫分（全不叫时概率约 (不叫率)^3，少量重试内必然成功）
+            // 重开直到有人叫分（全不叫时由 BiddingNeedsRestart 标记）
             int restarts = 0;
+            RunBidding(game);
             while (game.Phase != GamePhase.Playing)
             {
-                game.StartGame();
                 if (++restarts > 50) throw new InvalidOperationException("50 次发牌都无人叫地主，AI 阈值可能过严");
-            }
-
-            // 叫分阶段
-            while (game.Phase == GamePhase.Bidding)
-            {
-                int seat = game.BidTurnSeat;
-                int bid = BidAI.DecideBid(game.Players[seat].Hand, 0);
-                game.Bid(seat, bid);
+                game.StartGame();
+                RunBidding(game);
             }
 
             // 打牌阶段：最多 500 手防止死循环
@@ -136,17 +130,24 @@ namespace DDZ.Core.Tests
         {
             game.StartGame();
             int guard = 0;
-            while (game.Phase == GamePhase.Bidding)
+            RunBidding(game);
+            while (game.Phase != GamePhase.Playing)
+            {
+                if (++guard > 50)
+                    throw new InvalidOperationException("50 次发牌都无人叫地主");
+                game.StartGame();
+                RunBidding(game);
+            }
+        }
+
+        /// <summary>把当前 Bidding 阶段用 BidAI 走完（处理全不叫重开由调用方负责）。</summary>
+        private static void RunBidding(GameController game)
+        {
+            while (game.Phase == GamePhase.Bidding && !game.BiddingNeedsRestart)
             {
                 int seat = game.BidTurnSeat;
-                int bid = BidAI.DecideBid(game.Players[seat].Hand, 0);
-                if (game.Bid(seat, bid) >= 0) break;
-                if (++guard > 100)
-                {
-                    // 极小概率全不叫循环：重新开局
-                    game.StartGame();
-                    guard = 0;
-                }
+                int bid = BidAI.DecideBid(game.Players[seat].Hand, game.HighestBid);
+                game.Bid(seat, bid);
             }
         }
     }
