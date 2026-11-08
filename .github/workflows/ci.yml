@@ -85,12 +85,13 @@ jobs:
           Remove-Item C:\ndk.zip
 
       # ===== 缓存层 3：项目 library（Cocos 资源导入缓存）=====
+      # restore-keys 固定前缀命中最近一次缓存；精确键带 run_number 使每轮都保存新快照
       - name: 缓存项目 library
         uses: actions/cache@v4
         with:
           path: library
-          key: cocos-library-android-${{ hashFiles('assets/**', 'settings/**', 'package.json') }}
-          restore-keys: cocos-library-android-
+          key: cocos-library-android-v2-${{ github.run_number }}
+          restore-keys: cocos-library-android-v2-
 
       - name: 确保 Android SDK 组件
         shell: pwsh
