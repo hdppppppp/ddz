@@ -99,7 +99,8 @@ namespace DDZ.Core
 
         public override string ToString()
         {
-            string rankName = RankNames[(int)Rank - (int)Rank.Three];
+            int ordinal = Rank == Rank.Two ? 12 : (int)Rank - (int)Rank.Three;
+            string rankName = RankNames[ordinal];
             if (IsJoker)
                 return rankName;
 
