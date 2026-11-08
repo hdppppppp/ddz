@@ -5,6 +5,8 @@ import { PatternType, recognize } from '@core/Pattern/HandPattern';
 const C = (id: number) => new Card(id);
 const S = (r: Rank) => Card.byRank(r, Suit.Spades);
 const H = (r: Rank) => Card.byRank(r, Suit.Hearts);
+const D = (r: Rank) => Card.byRank(r, Suit.Diamonds);
+const Cl = (r: Rank) => Card.byRank(r, Suit.Clubs);
 
 describe('Card', () => {
     test('全 54 张 id↔rank/suit 回环', () => {
@@ -45,25 +47,25 @@ describe('HandPattern 识别', () => {
     test('单/对/三', () => {
         expect(recognize([S(Rank.Five)]).type).toBe(PatternType.Single);
         expect(recognize([S(Rank.Five), H(Rank.Five)]).type).toBe(PatternType.Pair);
-        expect(recognize([S(Rank.Five), H(Rank.Five), C(2)]).type).toBe(PatternType.Triple);
+        expect(recognize([S(Rank.Five), H(Rank.Five), D(Rank.Five)]).type).toBe(PatternType.Triple);
     });
 
     test('三带一/三带对', () => {
-        const p = recognize([S(Rank.Five), H(Rank.Five), C(2), S(Rank.Three)]);
+        const p = recognize([S(Rank.Five), H(Rank.Five), D(Rank.Five), S(Rank.Three)]);
         expect(p.type).toBe(PatternType.TripleSingle);
         expect(p.mainRank).toBe(Rank.Five);
-        expect(recognize([S(Rank.Five), H(Rank.Five), C(2), S(Rank.Seven), H(Rank.Seven)]).type)
+        expect(recognize([S(Rank.Five), H(Rank.Five), D(Rank.Five), S(Rank.Seven), H(Rank.Seven)]).type)
             .toBe(PatternType.TriplePair);
     });
 
     test('顺子', () => {
-        const p = recognize([S(Rank.Three), H(Rank.Four), C(2), Card.byRank(Rank.Six, Suit.Clubs), H(Rank.Seven)]);
+        const p = recognize([S(Rank.Three), H(Rank.Four), D(Rank.Five), Cl(Rank.Six), H(Rank.Seven)]);
         expect(p.type).toBe(PatternType.Straight);
         expect(p.length).toBe(5);
     });
 
     test('顺子带2不合法', () => {
-        expect(recognize([S(Rank.Ten), H(Rank.Jack), C(2), Card.byRank(Rank.King, Suit.Clubs), H(Rank.Ace), S(Rank.Two)]).type)
+        expect(recognize([S(Rank.Ten), H(Rank.Jack), D(Rank.Queen), Cl(Rank.King), H(Rank.Ace), S(Rank.Two)]).type)
             .toBe(PatternType.Invalid);
     });
 
@@ -74,22 +76,22 @@ describe('HandPattern 识别', () => {
     });
 
     test('飞机不带', () => {
-        const p = recognize([S(Rank.Four), H(Rank.Four), C(2), S(Rank.Five), H(Rank.Five), Card.byRank(Rank.Five, Suit.Diamonds)]);
+        const p = recognize([S(Rank.Four), H(Rank.Four), D(Rank.Four), S(Rank.Five), H(Rank.Five), D(Rank.Five)]);
         expect(p.type).toBe(PatternType.Plane);
         expect(p.length).toBe(2);
     });
 
     test('飞机带单', () => {
         const p = recognize([
-            S(Rank.Four), H(Rank.Four), C(2),
-            S(Rank.Five), H(Rank.Five), Card.byRank(Rank.Five, Suit.Diamonds),
+            S(Rank.Four), H(Rank.Four), D(Rank.Four),
+            S(Rank.Five), H(Rank.Five), D(Rank.Five),
             S(Rank.Seven), S(Rank.Nine),
         ]);
         expect(p.type).toBe(PatternType.PlaneSingle);
     });
 
     test('炸弹与王炸', () => {
-        const bomb = recognize([S(Rank.Two), H(Rank.Two), C(2), Card.byRank(Rank.Two, Suit.Clubs)]);
+        const bomb = recognize([S(Rank.Two), H(Rank.Two), D(Rank.Two), Cl(Rank.Two)]);
         expect(bomb.type).toBe(PatternType.Bomb);
         const rocket = recognize([C(52), C(53)]);
         expect(rocket.type).toBe(PatternType.Rocket);
@@ -108,7 +110,7 @@ describe('HandPattern 识别', () => {
 
     test('四带二', () => {
         const p = recognize([
-            S(Rank.Nine), H(Rank.Nine), C(2), Card.byRank(Rank.Nine, Suit.Clubs),
+            S(Rank.Nine), H(Rank.Nine), D(Rank.Nine), Cl(Rank.Nine),
             S(Rank.Three), H(Rank.Four),
         ]);
         expect(p.type).toBe(PatternType.FourTwo);
