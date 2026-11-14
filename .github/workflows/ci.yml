@@ -202,7 +202,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cocos-build-logs
-          path: "cocos-build-*.log"
+          path: |
+            cocos-build-*.log
+            temp/builder/log/
           retention-days: 7
           if-no-files-found: ignore
 
