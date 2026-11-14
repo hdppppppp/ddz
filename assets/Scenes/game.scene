@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "__type__": "cc.Scene",
     "_name": "game",
@@ -26,6 +26,7 @@
     "projection": 0,
     "clearFlags": 7,
     "_clearColor": {"__type__": "cc.Color", "r": 18, "g": 77, "b": 43, "a": 255},
+    "visibility": 41943040,
     "_id": "camera-comp"
   },
   {"__type__": "cc.SceneGlobals", "ambient": {"__id__": 9}, "shadows": {"__id__": 10}, "_skybox": {"__id__": 11}},
@@ -35,7 +36,7 @@
     "_parent": {"__id__": 1},
     "_children": [],
     "_active": true,
-    "_components": [{"__id__": 5}],
+    "_components": [{"__id__": 5}, {"__id__": 12}],
     "_id": "canvas-node"
   },
   {"__type__": "cc.Canvas", "node": {"__id__": 4}, "_id": "canvas-comp"},
@@ -52,5 +53,11 @@
   {"__type__": "cc.SceneInfo", "defaultZones": [], "entities": []},
   {"__type__": "cc.AmbientInfo"},
   {"__type__": "cc.ShadowsInfo"},
-  {"__type__": "cc.SkyboxInfo"}
+  {"__type__": "cc.SkyboxInfo"},
+  {
+    "__type__": "cc.UITransform",
+    "node": {"__id__": 4},
+    "_contentSize": {"__type__": "cc.Size", "width": 1080, "height": 1920},
+    "_id": "canvas-uitransform"
+  }
 ]

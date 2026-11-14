@@ -1,4 +1,4 @@
-﻿import { _decorator, Component, Node, Color, UITransform, Widget, Sprite, SpriteFrame, Texture2D, ImageAsset, Label, LabelOutline, UIOpacity, Layout, view, ResolutionPolicy, EventTouch, Button, Vec3, Vec2 } from 'cc';
+import { _decorator, Component, Node, Color, UITransform, Widget, Sprite, SpriteFrame, Texture2D, ImageAsset, Label, LabelOutline, UIOpacity, Layout, view, ResolutionPolicy, EventTouch, Button, Vec3, Vec2 } from 'cc';
 import { GameController, GamePhase, GameResult } from './Core/Flow/GameController';
 import { Card } from './Core/Model/Card';
 import { HandPattern } from './Core/Pattern/HandPattern';
@@ -447,3 +447,22 @@ export class GameRoot extends Component {
         this.toastTime = seconds;
     }
 }
+
+/**
+ * 场景注入器：手写 game.scene 无法可靠携带脚本组件引用（黑屏根因），
+ * 这里在场景启动后找到 Canvas 动态挂上 GameRoot。
+ * 无论首场景如何（含未来正式场景），都能接管 UI。
+ */
+import { director } from 'cc';
+
+function injectGameRoot(scene: unknown) {
+    const s = scene as { getChildByName?: (n: string) => Node | null; name?: string } | null;
+    if (!s || !s.getChildByName) return;
+    const canvas = s.getChildByName('Canvas');
+    if (!canvas || canvas.getComponent('GameRoot')) return;
+    canvas.addComponent(GameRoot);
+    console.log('[DDZ] GameRoot injected into', s.name);
+}
+
+director.on(director.EVENT_AFTER_SCENE_LAUNCH, injectGameRoot as never);
+if (director.getScene()) injectGameRoot(director.getScene());
