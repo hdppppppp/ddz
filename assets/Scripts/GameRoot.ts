@@ -369,7 +369,7 @@ export class GameRoot extends Component {
             this.renderHand();
             return;
         }
-        import('../Core/AI/PlayAI').then(({ decidePlay }) => {
+        import('./Core/AI/PlayAI').then(({ decidePlay }) => {
             const move = decidePlay(this.game, seat);
             this.selected.clear();
             if (move) for (const c of move) this.selected.add(c.id);
