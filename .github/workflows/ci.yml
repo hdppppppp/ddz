@@ -118,11 +118,10 @@ jobs:
           $cfg = Get-Content ci/build-config-android.json -Raw | ConvertFrom-Json
           Write-Host "JAVA_HOME = $env:JAVA_HOME"
           Write-Host "ANDROID_SDK = $env:ANDROID_SDK"
-          # 上轮教训：javaHome 字段被删后 PSCustomObject 上直接赋值会报
-          # "The property 'javaHome' cannot be found"。统一用 Add-Member -Force。
-          $cfg.android | Add-Member -Force -MemberType NoteProperty -Name javaHome -Value $env:JAVA_HOME
-          $cfg.android | Add-Member -Force -MemberType NoteProperty -Name sdkPath -Value $env:ANDROID_SDK
-          $cfg.android | Add-Member -Force -MemberType NoteProperty -Name ndkPath -Value "C:\android-ndk-r21e"
+          # android 包在 packages.android 下（不是顶层）；Add-Member -Force 兜属性缺失
+          $cfg.packages.android | Add-Member -Force -MemberType NoteProperty -Name javaHome -Value $env:JAVA_HOME
+          $cfg.packages.android | Add-Member -Force -MemberType NoteProperty -Name sdkPath -Value $env:ANDROID_SDK
+          $cfg.packages.android | Add-Member -Force -MemberType NoteProperty -Name ndkPath -Value "C:\android-ndk-r21e"
           $cfg | ConvertTo-Json -Depth 10 | Set-Content ci/build-config-android.json -Encoding utf8
           Write-Host "构建配置 javaHome 已改为运行时探测值"
 
