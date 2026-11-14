@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "DDZ",
   "server": "",
   "platform": "android",
@@ -33,7 +33,6 @@
       "useDebugKeystore": true,
       "sdkPath": "C:\\Android\\android-sdk",
       "ndkPath": "C:\\android-ndk-r21e",
-      "javaHome": "C:\\hostedtoolcache\\windows\\Java_Temurin-Hotspot_jdk\\17\\x64",
       "__version__": "1.0.1"
     },
     "cocos-service": {

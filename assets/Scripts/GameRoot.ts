@@ -1,9 +1,9 @@
-import { _decorator, Component, Node, Color, UITransform, Widget, Sprite, SpriteFrame, Texture2D, ImageAsset, Label, LabelOutline, UIOpacity, Layout, view, ResolutionPolicy, EventTouch, Button, Vec3, Vec2 } from 'cc';
-import { GameController, GamePhase, GameResult } from '../Core/Flow/GameController';
-import { Card } from '../Core/Model/Card';
-import { HandPattern } from '../Core/Pattern/HandPattern';
-import { decideBid } from '../Core/AI/BidAI';
-import { decidePlay } from '../Core/AI/PlayAI';
+﻿import { _decorator, Component, Node, Color, UITransform, Widget, Sprite, SpriteFrame, Texture2D, ImageAsset, Label, LabelOutline, UIOpacity, Layout, view, ResolutionPolicy, EventTouch, Button, Vec3, Vec2 } from 'cc';
+import { GameController, GamePhase, GameResult } from './Core/Flow/GameController';
+import { Card } from './Core/Model/Card';
+import { HandPattern } from './Core/Pattern/HandPattern';
+import { decideBid } from './Core/AI/BidAI';
+import { decidePlay } from './Core/AI/PlayAI';
 import { ResultDialog } from './UI/ResultDialog';
 import { ScoreStore } from './UI/ScoreStore';
 import { CardAtlas } from './UI/CardAtlas';
