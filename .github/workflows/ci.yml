@@ -29,7 +29,7 @@ jobs:
     name: 云端构建 APK (Cocos Creator 3.8.6)
     runs-on: windows-latest
     needs: core-tests
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cocos-main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/cocos-main' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     env:
       CC_VERSION: 3.8.6
       CC_ZIP: CocosCreator-v3.8.6-win-032501.zip
